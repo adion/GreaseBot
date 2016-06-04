@@ -1,3 +1,5 @@
+'use strict';
+
 let Discord = require('discord.js'),
     commands = require('./commands'),
     config = require('./config.json');

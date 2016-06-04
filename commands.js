@@ -1,3 +1,5 @@
+'use strict';
+
 module.exports = {
     'ping': {
         description: 'responds with "pong"',
