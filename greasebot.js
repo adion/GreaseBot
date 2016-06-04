@@ -5,7 +5,11 @@ let Discord = require('discord.js'),
 let bot = new Discord.Client();
 
 bot.on('ready', () => {
-    console.log('GreaseBot online! Serving in %d channels', bot.channels.length);
+    console.log('GreaseBot online! Connected to servers:');
+
+    bot.servers.forEach(server => {
+        console.log(' ✓', server.name);
+    })
 });
 
 bot.on('disconnected', () => {
