@@ -22,6 +22,9 @@
     "scripts": {
         "start": "node greasebot.js"
     },
+    "dependencies": {
+        "discord.js": "^7.0.1"
+    },
     "devDependencies": {
         "eslint": "^2.11.1"
     },
