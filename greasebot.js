@@ -41,7 +41,9 @@ bot.on('message', msg => {
         }
 
         // process the command (or do nothing for garbage commands)
-        commands[cmd].process(bot, msg, args);
+        if (commands[cmd]) {
+            commands[cmd].process(bot, msg, args);
+        }
     }
 });
 
