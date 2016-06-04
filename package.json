@@ -1,0 +1,31 @@
+{
+    "name": "greasebot",
+    "version": "0.0.1",
+    "description": "Discord guild bot for the greasy",
+    "main": "index.js",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/adion/GreaseBot.git"
+    },
+    "keywords": [
+        "discord",
+        "discordapp",
+        "bot",
+        "chatbot"
+    ],
+    "author": "",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/adion/GreaseBot/issues"
+    },
+    "homepage": "https://github.com/adion/GreaseBot#readme",
+    "devDependencies": {
+        "eslint": "^2.11.1"
+    },
+    "eslintConfig": {
+        "env": {
+            "node": true,
+            "es6": true
+        }
+    }
+}
