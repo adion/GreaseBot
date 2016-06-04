@@ -1,11 +1,16 @@
 'use strict';
 
 let Discord = require('discord.js'),
-    commands = require('./commands'),
-    config = require('./config.json');
+    commands = require('./commands');
 
 let bot = new Discord.Client(),
-    BOT_TOKEN = process.env.BOT_TOKEN || config.BOT_TOKEN;
+    config = process.env;
+
+try {
+    config = Object.assign(config, require('./config.json'));
+} catch (e) {
+    console.log('config.json missing!');
+}
 
 bot.on('ready', () => {
     console.log('GreaseBot online! Connected to servers:');
@@ -55,7 +60,7 @@ bot.on('message', msg => {
 });
 
 // gre-he-easy!
-bot.loginWithToken(BOT_TOKEN, err => {
+bot.loginWithToken(config.BOT_TOKEN, err => {
     if (err) {
         console.log('GreaseBot could not login!', err);
     }
