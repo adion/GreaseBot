@@ -58,15 +58,25 @@ module.exports = {
                                     chunks += chunk;
                                 });
                                 res.on('end', () => {
-                                    let err, data;
+                                    let err, data, message;
 
                                     try {
                                         data = JSON.parse(chunks);
                                     } catch (e) {
                                         console.log('Spotify \'search\' response errored:', e);
                                     }
-    debugger;
-                                    bot.sendMessage(msg.channel, data.external_urls.spotify + '(' + data.uri + ')');
+
+                                    // search returned results; dump them out
+                                    message = 'Found ' + Object.keys(data).join(', ') + ':\n';
+
+                                    Object.keys(data).forEach((entity) => {
+                                        message += '\n**' + entity + ' (' + data[entity].items.length + ')**\n' +
+                                            data[entity].items.reduceRight((memo, item) => {
+                                                return (memo !== '' ? memo + ', ' : memo) + item.name;
+                                            }, '') + '\n';
+                                    });
+
+                                    bot.sendMessage(msg.channel, message);
                                 });
                             }
                         ).on('error', err => {
