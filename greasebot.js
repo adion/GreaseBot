@@ -1,16 +1,16 @@
 'use strict';
 
-let Discord = require('discord.js'),
-    commands = require('./commands');
+const Discord = require('discord.js'),
+    commands = require('./commands'),
+    config = require('./config'),
+    http = require('http');
 
 let bot = new Discord.Client(),
-    config = process.env;
-
-try {
-    config = Object.assign(config, require('./config.json'));
-} catch (e) {
-    console.log('config.json missing!');
-}
+    server = http.createServer((req, res) => {
+        res.writeHead(200, {'Content-Type': 'text/plain'});
+        res.write('Hello World!');
+        res.end();
+    });
 
 bot.on('ready', () => {
     console.log('GreaseBot online! Connected to servers:');
@@ -65,3 +65,6 @@ bot.loginWithToken(config.BOT_TOKEN, err => {
         console.log('GreaseBot could not login!', err);
     }
 });
+
+// for oauth redirects
+server.listen(8888);
