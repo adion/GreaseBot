@@ -1,7 +1,7 @@
 'use strict';
 
 const Discord = require('discord.js'),
-    commands = require('./commands'),
+    commands = require('./commands/commands'),
     config = require('./config'),
     http = require('http');
 
