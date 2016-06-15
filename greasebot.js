@@ -5,11 +5,10 @@ const Discord = require('discord.js'),
     config = require('./config'),
     http = require('http');
 
-let bot = new Discord.Client(),
-    server = http.createServer((req, res) => {
+const bot = new Discord.Client(),
+    webServer = http.createServer((req, res) => {
         res.writeHead(200, {'Content-Type': 'text/plain'});
-        res.write('Hello World!');
-        res.end();
+        res.end('Hello World!');
     });
 
 bot.on('ready', () => {
@@ -67,4 +66,4 @@ bot.loginWithToken(config.BOT_TOKEN, err => {
 });
 
 // for oauth redirects
-server.listen(8888);
+webServer.listen(8888);

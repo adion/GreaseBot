@@ -2,15 +2,23 @@ const config = require('../config'),
     https = require('https'),
     pg = require('pg');
 
+function doSubCommand(subCmd, accessToken, args, bot, msg) {
+    if (subCmd === 'search') {
+        doSearch(accessToken, args, bot, msg);
+    } else if (subCmd === 'whoami') {
+        doWhoAmI(accessToken, bot, msg);
+    }
+}
+
 // TODO: refactor this mess...
-function doSearch(results, cmdArgs, bot, msg) {
+function doSearch(accessToken, cmdArgs, bot, msg) {
     let opts = {
             host: 'api.spotify.com',
             path: '/v1/search?type=album,artist,track&q=' + encodeURIComponent(cmdArgs.join(' ')),
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
-                'Authorization': results.token_type + ' ' + results.access_token
+                'Authorization': `Bearer ${accessToken}`
             }
         },
         search = https.request(opts, (res) => {
@@ -48,6 +56,11 @@ function doSearch(results, cmdArgs, bot, msg) {
     search.end();
 }
 
+// TODO: refactor this mess...
+function doWhoAmI(accessToken, bot, msg) {
+
+}
+
 // list of possible spotify commands
 const subCommands = ['search'];
 
@@ -70,16 +83,70 @@ module.exports = {
             return;
         }
 
-        // TODO: check if token expired
-        // grab token if needed
-        if (/*needsToken*/true) {
-            auth.getOAuthAccessToken('', {'grant_type': 'client_credentials'}, (e, accessToken, refreshToken, results) => {
-                // TODO: store refreshToken
-
-                if (subCmd === 'search') {
-                    doSearch(results, args, bot, msg);
+        pg.connect(config.PG_CONNECTION_STRING, (err, client, done) => {
+            const handleError = (err) => {
+                if (!err) {
+                    return false;
                 }
+
+                if (client) {
+                    done(client);
+                }
+
+                console.log(err);
+                return true;
+            };
+
+            if (handleError(err)) {
+                return;
+            }
+
+            // grab access_token and issue sub-command
+            client.query('SELECT * FROM oauth WHERE id = $1', [msg.sender.id], (err, result) => {
+                if (handleError(err)) {
+                    return;
+                }
+
+                // no record
+                if (!result.rows.length) {
+                    // fetch oauth tokens
+                    auth.getOAuthAccessToken('', {'grant_type': 'client_credentials'}, (e, accessToken, refreshToken, results) => {
+                        if (handleError(e)) {
+                            return;
+                        }
+
+                        // insert new oauth record
+                        client.query('INSERT INTO oauth VALUES ($1, $2, $3)', [msg.sender.id, accessToken, refreshToken], (err, result) => {
+                            if (handleError(err)) {
+                                return;
+                            }
+                        });
+
+                        doSubCommand(subCmd, accessToken, args, bot, msg);
+                    });
+                    
+                    return;
+                }
+
+                const accessToken = result.rows[0].access_token;
+
+                // TODO: check expiry and refresh if expired
+
+                doSubCommand(subCmd, accessToken, args, bot, msg);
+
+                done();
             });
-        }
+        });
+
+        // grab token if needed
+        // if (/*needsToken*/true) {
+        //     auth.getOAuthAccessToken('', {'grant_type': 'client_credentials'}, (e, accessToken, refreshToken, results) => {
+        //         // TODO: store refreshToken
+        //
+        //         if (subCmd === 'search') {
+        //             doSearch(results, args, bot, msg);
+        //         }
+        //     });
+        // }
     }
 };

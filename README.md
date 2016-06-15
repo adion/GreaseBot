@@ -12,4 +12,11 @@
 0. Copy `config.json.sample` into `config.json` and fill in the variables with your information. These can optionally be provided by environment variables of the same name.
 
 ## Running
-`npm start`
+
+### PostgreSQL Setup
+0. `brew install postgres`
+0. `initdb /usr/local/var/postgres`
+0. `psql postgres -f setup_db.sql`
+
+0. `postgres -D /usr/local/var/postgres`
+0. `npm start`

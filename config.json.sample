@@ -1,3 +1,6 @@
 {
-    "BOT_TOKEN": ""
+    "BOT_TOKEN": "",
+    "PG_CONNECTION_STRING": "",
+    "SPOTIFY_CLIENT_ID": "",
+    "SPOTIFY_CLIENT_SECRET": ""
 }
