@@ -14,6 +14,7 @@ function chunkString(str, size) {
   return chunks;
 }
 
+// TODO: should prevent breaking words and Markdown
 // takes a long message (>2000 chars) and breaks it down and sends it as multiple smaller messages
 function sendChunkedMessage(bot, channel, message) {
     let chunks = chunkString(message, 2000);
@@ -21,12 +22,27 @@ function sendChunkedMessage(bot, channel, message) {
     if (chunks.length) {
         bot.sendMessage(channel, chunks.shift(), err => {
             if (!err) {
-                sendChunkedMessage(bot, msg, chunks.join(''));
+                sendChunkedMessage(bot, channel, chunks.join(''));
             } else {
                 console.log(err);
             }
         });
     }
+}
+
+// performs a basic http GET
+function doHttpGet(url, done) {
+    http.get(url, res => {
+        let data = '';
+
+        res.on('data', d => {
+            data += d;
+        });
+
+        res.on('end', () => {
+            done(data);
+        });
+    });
 }
 
 // supported games
@@ -42,18 +58,10 @@ const SUPPORTED_GAMES = {
         displayName: 'Overwatch',
         listingUrl: 'http://overwatch.wikia.com/api/v1/Articles/List?category=Patch+notes',
         contentsUrl: 'http://overwatch.wikia.com/api/v1/Articles/AsSimpleJson?id=',
-        scrape(doneCallback) {
-            const HEADING_LEVELS = ['__**%s**__', '***%s***', '**%s**'];
-
-            http.get(this.listingUrl, res => {
-                let listingBody = '';
-
-                res.on('data', d => {
-                    listingBody += d;
-                });
-
-                res.on('end', () => {
-                    const listings = JSON.parse(listingBody),
+        fetch(options, done) {
+            const HEADING_LEVELS = ['__**%s**__', '***%s***', '**%s**'],
+                listingCallback = (data) => {
+                    const listings = JSON.parse(data),
                         patches = listings.items.filter(item => {
                                 return item.title !== 'List of Patches';
                             }).sort((a, b) => {
@@ -65,37 +73,36 @@ const SUPPORTED_GAMES = {
 
                                 return aDate - bDate;
                             }).reverse(),
-                        latest = patches.shift();
+                        patch = patches[options.patchesAgo];
 
-                    http.get(this.contentsUrl + latest.id, res => {
-                        let contentsBody = '';
+                    doHttpGet(this.contentsUrl + patch.id, contentsCallback);
+                },
+                contentsCallback = (data) => {
+                    const buildContent = (elements, content) => {
+                            return elements.reduce((prev, cur) => {
+                                const delimeter = cur.type === 'paragraph' ? '\n' : '- ',
+                                    text = cur.text ? delimeter + cur.text : '';
 
-                        res.on('data', d => {
-                            contentsBody += d;
-                        });
+                                return buildContent(cur.elements || [], (prev ? prev + '\n' + text : text));
+                            }, content);
+                        },
+                        compileSectionContents = (prev, cur) => {
+                            let content = buildContent(cur.content);
 
-                        res.on('end', () => {
-                            const buildContent = (elements, content) => {
-                                    return elements.reduce((prev, cur) => {
-                                        const text = cur.text ? '-' + cur.text : '';
-                                        return buildContent(cur.elements, (prev ? prev + '\n' + text : text));
-                                    }, content);
-                                },
-                                contents = JSON.parse(contentsBody),
-                                compiled = `${this.displayName} patch notes for ` + contents.sections.reduce((prev, cur) => {
-                                    let content = buildContent(cur.content);
+                            content = HEADING_LEVELS[cur.level - 1].replace('%s', cur.title) +
+                                (content ? '\n' + content : '');
 
-                                    content = HEADING_LEVELS[cur.level - 1].replace('%s', cur.title) +
-                                        (content ? '\n' + content : '');
+                            return (prev ? prev + '\n' + content : content) + '\n';
+                        },
+                        contents = JSON.parse(data),
+                        compiled = `${this.displayName} patch notes for ` +
+                            contents.sections.reduce(compileSectionContents, null);
 
-                                    return (prev ? prev + '\n' + content : content) + '\n';
-                                }, null);
+                    done(compiled);
+                };
 
-                            doneCallback(compiled);
-                        });
-                    });
-                });
-            });
+            // go get it!
+            doHttpGet(this.listingUrl, listingCallback);
         }
     }
 };
@@ -115,14 +122,17 @@ module.exports = {
         }
 
         // sub-command isn't recognized; bail
-        if (Object.keys(SUPPORTED_GAMES).indexOf(args[0]) < 0) {
-            bot.sendMessage(msg.channel, `I don\'t know anything about "${args[0]}"!`);
+        const gameName = args[0];
+        if (Object.keys(SUPPORTED_GAMES).indexOf(gameName) < 0) {
+            bot.sendMessage(msg.channel, `I don\'t know anything about "${gameName}"!`);
             return;
         }
 
-        // scrape away!
-        const game = SUPPORTED_GAMES[args[0]];
-        game.scrape(results => {
+        // fetch away!
+        const game = SUPPORTED_GAMES[gameName],
+            patchesAgo = parseInt(args[1], 10) || 0;
+
+        game.fetch({patchesAgo}, results => {
             sendChunkedMessage(bot, msg.channel, results);
         });
     }
