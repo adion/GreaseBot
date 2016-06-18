@@ -11,10 +11,12 @@ module.exports = {
     'rickyism': {
         description: 'a random bit of knowledge from our pal, Ricky',
         process: (bot, msg, args) => {
-            let rickyisms = require('./rickyisms.json'),
+            const rickyisms = require('./rickyisms.json'),
                 rickyism = rickyisms[Math.floor(Math.random() * rickyisms.length)];
 
             bot.sendMessage(msg.channel, rickyism);
         }
-    }
+    },
+
+    'patch_notes': require('./patch_notes')
 };

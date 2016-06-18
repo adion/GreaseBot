@@ -1,7 +1,7 @@
 'use strict';
 
 let Discord = require('discord.js'),
-    commands = require('./commands');
+    commands = require('./commands/all');
 
 let bot = new Discord.Client(),
     config = process.env;
