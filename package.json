@@ -24,8 +24,8 @@
   },
   "dependencies": {
     "discord.js": "^7.0.1",
-    "html-to-text": "^2.1.0",
-    "osmosis": "^1.0.1"
+    "osmosis": "^1.0.1",
+    "to-markdown": "^3.0.0"
   },
   "devDependencies": {
     "eslint": "^2.11.1"
