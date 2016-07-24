@@ -23,9 +23,7 @@
     "start": "node greasebot.js"
   },
   "dependencies": {
-    "discord.js": "^7.0.1",
-    "osmosis": "^1.0.1",
-    "to-markdown": "^3.0.0"
+    "discord.js": "^7.0.1"
   },
   "devDependencies": {
     "eslint": "^2.11.1"

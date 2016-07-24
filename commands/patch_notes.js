@@ -1,16 +1,6 @@
 'use strict';
 
-// supported games
-const SUPPORTED_GAMES = {
-    'hots': {
-        displayName: 'Heroes of the Storm',
-        listingUrl: 'http://us.battle.net/heroes/en/search?f=article&k=Patch%20Notes&sort=time&dir=d'
-    },
-    'overwatch': {
-        displayName: 'Overwatch',
-        listingUrl: 'http://us.battle.net/forums/en/overwatch/21446648/'
-    }
-};
+const http = require('http');
 
 // splits a string into an array of `size` length characters
 function chunkString(str, size) {
@@ -39,6 +29,77 @@ function sendChunkedMessage(bot, channel, message) {
     }
 }
 
+// supported games
+const SUPPORTED_GAMES = {
+    // hots: {
+    //     displayName: 'Heroes of the Storm',
+    //     listingUrl: 'http://us.battle.net/heroes/en/search?f=article&k=Patch%20Notes&sort=time&dir=d',
+    //     scrape(doneCallback) {
+    //
+    //     }
+    // },
+    overwatch: {
+        displayName: 'Overwatch',
+        listingUrl: 'http://overwatch.wikia.com/api/v1/Articles/List?category=Patch+notes',
+        contentsUrl: 'http://overwatch.wikia.com/api/v1/Articles/AsSimpleJson?id=',
+        scrape(doneCallback) {
+            const HEADING_LEVELS = ['__**%s**__', '***%s***', '**%s**'];
+
+            http.get(this.listingUrl, res => {
+                let listingBody = '';
+
+                res.on('data', d => {
+                    listingBody += d;
+                });
+
+                res.on('end', () => {
+                    const listings = JSON.parse(listingBody),
+                        patches = listings.items.filter(item => {
+                                return item.title !== 'List of Patches';
+                            }).sort((a, b) => {
+                                const regex = /^([\w,\s]*)(?:\(beta\))?$/,
+                                    aMatches = a.title.match(regex),
+                                    bMatches = b.title.match(regex),
+                                    aDate = new Date(aMatches[1]),
+                                    bDate = new Date(bMatches[1]);
+
+                                return aDate - bDate;
+                            }).reverse(),
+                        latest = patches.shift();
+
+                    http.get(this.contentsUrl + latest.id, res => {
+                        let contentsBody = '';
+
+                        res.on('data', d => {
+                            contentsBody += d;
+                        });
+
+                        res.on('end', () => {
+                            const buildContent = (elements, content) => {
+                                    return elements.reduce((prev, cur) => {
+                                        const text = cur.text ? '-' + cur.text : '';
+                                        return buildContent(cur.elements, (prev ? prev + '\n' + text : text));
+                                    }, content);
+                                },
+                                contents = JSON.parse(contentsBody),
+                                compiled = `${this.displayName} patch notes for ` + contents.sections.reduce((prev, cur) => {
+                                    let content = buildContent(cur.content);
+
+                                    content = HEADING_LEVELS[cur.level - 1].replace('%s', cur.title) +
+                                        (content ? '\n' + content : '');
+
+                                    return (prev ? prev + '\n' + content : content) + '\n';
+                                }, null);
+
+                            doneCallback(compiled);
+                        });
+                    });
+                });
+            });
+        }
+    }
+};
+
 module.exports = {
     description: 'grabs the latest Blizzard patch notes for the given game',
     process: (bot, msg, args) => {
@@ -59,41 +120,10 @@ module.exports = {
             return;
         }
 
-        const game = SUPPORTED_GAMES[args[0]],
-            osmosis = require('osmosis'),
-            toMarkdown = require('to-markdown'),
-            results = [];
-
-        // TODO: how to abstract this?
-        osmosis.get(game.listingUrl)
-            .find('a.ForumTopic')
-            .match(/^\s*Overwatch Patch Notes/)
-            .set({
-                href: '@href',
-                title: '.ForumTopic-title',
-            })
-            .follow('@href')
-            .set({body: '.TopicPost-bodyContent:html'})
-            .data(data => {
-
-                // `a.ForumTopic` contains a nested `a` with its own `@href`
-                // this will cause osmosis to double up each context...
-                // ignore links with fragments (e.g., /foo/bar#post1)
-                if (data.href.indexOf('#') < 0) {
-                    results.push(data);
-                }
-            })
-            .done(() => {
-
-                // send the latest notes
-                if (results.length) {
-                    const markdown = toMarkdown(results[0].body);
-
-                    // FIXME: this can murder HTML...
-                    sendChunkedMessage(bot, msg.channel, markdown);
-                } else {
-                    bot.sendMessage(msg.channel, 'No patch notes found :confused:');
-                }
-            });
+        // scrape away!
+        const game = SUPPORTED_GAMES[args[0]];
+        game.scrape(results => {
+            sendChunkedMessage(bot, msg.channel, results);
+        });
     }
 };
