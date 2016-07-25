@@ -15,7 +15,6 @@ module.exports = {
                 return;
             }
 
-            debugger;
             const command = args[0],
                 {description, usage} = module.exports[command];
 
