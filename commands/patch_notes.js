@@ -73,7 +73,9 @@ const SUPPORTED_GAMES = {
 
                                 return aDate - bDate;
                             }).reverse(),
-                        patch = patches[options.patchesAgo];
+                        OFFSET = options.patchesAgo >= patches.length || options.patchesAgo < 0 ?
+                            0 : options.patchesAgo,
+                        patch = patches[OFFSET];
 
                     doHttpGet(this.contentsUrl + patch.id, contentsCallback);
                 },
