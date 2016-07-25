@@ -73,8 +73,8 @@ const SUPPORTED_GAMES = {
 
                                 return aDate - bDate;
                             }).reverse(),
-                        OFFSET = options.patchesAgo >= patches.length || options.patchesAgo < 0 ?
-                            0 : options.patchesAgo,
+                        OFFSET = options.patchesAgo >= patches.length ?
+                            0 : Math.abs(options.patchesAgo),
                         patch = patches[OFFSET];
 
                     doHttpGet(this.contentsUrl + patch.id, contentsCallback);
@@ -111,6 +111,7 @@ const SUPPORTED_GAMES = {
 
 module.exports = {
     description: 'grabs the latest Blizzard patch notes for the given game',
+    usage: '!patch_notes <%s> [offset]'.replace('%s', Object.keys(SUPPORTED_GAMES).join('|')),
     process: (bot, msg, args) => {
 
         // dump supported games if no game is specified
@@ -134,8 +135,6 @@ module.exports = {
         const game = SUPPORTED_GAMES[gameName],
             patchesAgo = parseInt(args[1], 10) || 0;
 
-        game.fetch({patchesAgo}, results => {
-            sendChunkedMessage(bot, msg.channel, results);
-        });
+        game.fetch({patchesAgo}, results => sendChunkedMessage(bot, msg.channel, results));
     }
 };
