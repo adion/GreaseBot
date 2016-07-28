@@ -7,9 +7,17 @@ const overwatch = require('./games/overwatch'),
 const SUPPORTED_GAMES = {overwatch},
     gameKeys = Object.keys(SUPPORTED_GAMES);
 
+// returns command usage as a formatted string
+function getUsage() {
+    return `\`!patch_notes\` \`<${gameKeys.join('|')}>\` \`[offset]\`
+
+\`[offset]\` is \`0\` by default but can be any integer to start counting "patches ago", e.g.,
+\`!patch_notes\` \`overwatch\` \`1\` will fetch patch notes for the second-to-latest patch (negative offsets such as \`-1\` will also work)`;
+}
+
 module.exports = {
     description: 'grabs the latest Blizzard patch notes for the given game',
-    usage: `!patch_notes <${gameKeys.join('|')}> [offset]`,
+    usage: getUsage(),
     process: (bot, msg, args) => {
 
         // dump supported games if no game is specified
