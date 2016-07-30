@@ -1,9 +1,9 @@
 'use strict';
 
-module.exports = {
+let commands = {
     'help': {
         description: 'prints usage information for bot commands',
-        usage: '!help [command]',
+        usage: '`!help` `[command]`',
         process: (bot, msg, args) => {
 
             // no additional args: display all commands
@@ -26,7 +26,7 @@ module.exports = {
 
     'ping': {
         description: 'responds with "pong"',
-        usage: '!ping',
+        usage: '`!ping`',
         process: (bot, msg, args) => {
             bot.sendMessage(msg.channel, msg.sender + ' pong');
         }
@@ -34,12 +34,20 @@ module.exports = {
 
     'rickyism': {
         description: 'a random bit of knowledge from our pal, Ricky',
-        usage: '!rickyism',
+        usage: '`!rickyism`',
         process: (bot, msg, args) => {
             const rickyisms = require('./rickyisms.json'),
                 rickyism = rickyisms[Math.floor(Math.random() * rickyisms.length)];
 
             bot.sendMessage(msg.channel, rickyism);
         }
-    }
+    },
+
+    'overwatch': require('./overwatch')
 };
+
+// aliases
+commands.ow = commands.overwatch;
+commands.pn = commands.patch_notes;
+
+module.exports = commands;
