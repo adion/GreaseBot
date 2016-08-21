@@ -1,7 +1,8 @@
 'use strict';
 
 const cheerio = require('cheerio'),
-    request = require('request');
+    request = require('request'),
+    sendChunks = require('../util/sendChunkedMessage');
 
 const BATTLE_NET_HEADERS = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'
@@ -62,8 +63,10 @@ function getUsage() {
 
 - \`achievements\`
   Displays acheivements won and needed
+
 - \`average\` (\`avg\`)
   Displays per game averages
+
 - \`stats\`
   Displays overview/summary statistics
 
@@ -98,7 +101,7 @@ module.exports = {
             headers: BATTLE_NET_HEADERS
         }, (err, res, data) => {
             let output;
-            debugger;
+
             const $ = cheerio.load(data),
                 $context = $(`#${getContext(args[2])}`),
                 $averageTable = getTable($, $context, 'Average'),
@@ -133,45 +136,48 @@ module.exports = {
                 },
                 listAchievments = () => {
                     const compileAchievements = (prev, cur) => {
-                            const val = $(cur).find('.media-card-caption').text();
+                            const $el = $(cur).next('.tooltip-tip'),
+                                name = $el.find('.h5').text(),
+                                description = $el.find('.h6').text(),
+                                val = `**${name}**\n${description}\n`;
 
                             if (!prev) {
-                                return '- ' + val;
+                                return [val];
                             }
 
-                            return prev + '\n- ' + val;
+                            prev.push('\n' + val);
+                            return prev;
                         },
                         won = $achievements.filter(hasAchievement(true)).get().reduce(compileAchievements, null),
                         needed = $achievements.filter(hasAchievement(false)).get().reduce(compileAchievements, null);
 
-                    return `**Won**\n${won}\n\n**Needed**\n${needed}`;
+                    return [`**WON**\n\n`, ...won, `\n\n**NEEDED**\n\n`, ...needed];
                 };
 
             switch(cmd) {
                 case 'stats':
-                    output = `
-**${name}** (Level \`${qpLevel}\`, Rank \`${compRank}\`)
-
-- \`${gamesWon}\` wins, \`${gamesLost}\` losses (\`${winRate}%\` win rate)
-- \`${kills}\` kills, \`${deaths}\` deaths (\`${kdRatio}\` K/D ratio)
-- \`${achievementsWon}/${totalAchievements}\` achievements (\`${achievementWinRate}%\` won)
-- \`${lph}\` LPH (Levels Per Hour)
-                    `;
+                    output = [
+                        `\n\n**${name}** (Level \`${qpLevel}\`, Rank \`${compRank}\`)\n\n`,
+                        `- \`${gamesWon}\` wins, \`${gamesLost}\` losses (\`${winRate}%\` win rate)\n`,
+                        `- \`${kills}\` kills, \`${deaths}\` deaths (\`${kdRatio}\` K/D ratio)\n`,
+                        `- \`${achievementsWon}/${totalAchievements}\` achievements (\`${achievementWinRate}%\` won)\n`,
+                        `- \`${lph}\` LPH (Levels Per Hour)`
+                    ];
                     break;
 
                 case 'avg':
                 case 'average':
-                    output = `
-**${name}, Per Game Averages**
-${listAverages()}
-                    `;
+                    output = [
+                        `\n\n**${name}, Per Game Averages**\n\n`,
+                        ...listAverages()
+                    ];
                     break;
 
                 case 'achievements':
-                    output = `
-**${name}, Achievements**
-${listAchievments()}
-                    `;
+                    output = [
+                        `\n\n**${name}, Achievements**\n\n`,
+                        ...listAchievments()
+                    ];
                     break;
 
                 default:
@@ -179,7 +185,8 @@ ${listAchievments()}
                     break;
             }
 
-            bot.sendMessage(msg.channel, output);
+            // TODO: start/stop typing for long-running commands
+            sendChunks(output, bot, msg.channel);
         });
     }
 };
